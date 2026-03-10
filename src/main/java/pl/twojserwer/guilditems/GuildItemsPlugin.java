@@ -25,27 +25,29 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
-        registerRemainingItems();
+        registerFinalItems();
         startPassiveEffectsTask();
-        getLogger().info("Zaktualizowano GuildItems - Totem to teraz Sztandar.");
+        getLogger().info("GuildItems załadowany! Pozostało 10 zbalansowanych przedmiotów.");
     }
 
-    private void registerRemainingItems() {
+    private void registerFinalItems() {
         // --- MIECZE I NARZEDZIA ---
         createRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "RNR", "RSR", " R ", 'R', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
         createRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "ISI", " S ", 'I', Material.IRON_BLOCK, 'S', Material.BLAZE_ROD);
         createRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 'D', Material.DIAMOND_BLOCK, 'I', Material.ICE, 'S', Material.STICK);
         createRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " S ", "   ", 'P', Material.POISONOUS_POTATO, 'S', Material.IRON_INGOT);
 
-        // --- DYSTANSOWE ---
+        // --- DYSTANSOWE I MOBILNOSC ---
         createRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QW", " Q ", " QW", 'Q', Material.QUARTZ_BLOCK, 'W', Material.WHITE_WOOL);
         createRecipe("grappling_hook", Material.FISHING_ROD, "§bHak", 1020, "III", "IRI", "III", 'I', Material.IRON_INGOT, 'R', Material.FISHING_ROD);
 
         // --- AMULETY I SPECJALNE ---
         createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
         createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 'O', Material.OBSIDIAN, 'S', Material.SHIELD);
-        // ZMIANA: Totem ucieczki to teraz WHITE_BANNER
-        createRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
+        
+        // POPRAWIONA RECEPTURA SZTANDARU (E = Perła, B = Sztandar)
+        createRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "EBE", "EEE", 'E', Material.ENDER_PEARL, 'B', Material.WHITE_BANNER);
+        
         createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
     }
 
@@ -72,15 +74,19 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                 ItemStack item = p.getInventory().getItemInMainHand();
                 String id = getCustomId(item);
 
+                // TARCZA TYTANA - Poprawione usuwanie efektu
                 if ("tank_shield".equals(id)) {
-                    p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
-                } else if (p.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE)) {
-                    // Usuwamy efekt tylko jeśli został nadany przez tarcze (krótki czas trwania)
-                    if (p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE).getDuration() <= 40) {
-                        p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 45, 1));
+                } else {
+                    if (p.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE)) {
+                        PotionEffect effect = p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                        if (effect != null && effect.getDuration() <= 45) {
+                            p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                        }
                     }
                 }
 
+                // AMULET ZYCIA
                 if ("life_amulet".equals(id)) {
                     double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                     if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 0.5, maxH));
@@ -94,12 +100,14 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Player p = e.getPlayer();
         if (isCustomItem(p.getInventory().getItemInMainHand(), "grappling_hook")) {
             if (e.getState() == PlayerFishEvent.State.IN_GROUND) {
-                if (!checkCooldown(p, "grappling_hook", 90)) return;
-                
+                if (!checkCooldown(p, "grappling_hook", 90)) {
+                    e.getHook().remove();
+                    return;
+                }
                 Location hookLoc = e.getHook().getLocation();
                 Vector direction = hookLoc.toVector().subtract(p.getLocation().toVector()).normalize();
-                p.setVelocity(direction.multiply(1.8).setY(0.8)); // Delikatnie osłabiony hak dla balansu
-                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
+                p.setVelocity(direction.multiply(1.8).setY(0.8));
+                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1.2f);
             }
         }
     }
@@ -107,7 +115,6 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e) {
         String id = getCustomId(e.getItemInHand());
-        // Blokujemy stawianie Rdzenia i Sztandaru Ucieczki
         if ("gravity_core".equals(id) || "escape_totem".equals(id)) {
             e.setCancelled(true);
             e.getPlayer().sendMessage("§cTego przedmiotu nie można postawić!");
@@ -133,18 +140,22 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                     p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
                 }
                 case "escape_totem" -> {
-                    if (!checkCooldown(p, id, 300)) return; // 5 minut
+                    if (!checkCooldown(p, id, 300)) return;
                     Random r = new Random();
-                    int dist = 50 + r.nextInt(31); // 50-80 kratek
+                    int dist = 50 + r.nextInt(31); // 50-80 bloków
                     double angle = r.nextDouble() * 2 * Math.PI;
                     Location loc = p.getLocation().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-                    loc.setY(p.getWorld().getHighestBlockYAt(loc) + 1);
+                    loc.setY(p.getWorld().getHighestBlockYAt(loc) + 1.5);
                     p.teleport(loc);
+                    p.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1, 1);
                     p.sendMessage("§aUżyto Sztandaru Ucieczki!");
                 }
                 case "gravity_core" -> {
                     if (!checkCooldown(p, id, 60)) return;
-                    p.getNearbyEntities(7, 7, 7).forEach(entity -> entity.setVelocity(new Vector(0, 1.2, 0)));
+                    p.getNearbyEntities(7, 7, 7).forEach(entity -> {
+                        if (entity instanceof LivingEntity) entity.setVelocity(new Vector(0, 1.2, 0));
+                    });
+                    p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1, 2);
                 }
             }
         }
@@ -166,7 +177,10 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onShoot(EntityShootBowEvent e) {
         if (e.getEntity() instanceof Player p && isCustomItem(e.getBow(), "artemis_bow")) {
-            if (checkCooldown(p, "artemis_bow_shoot", 20)) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
+            if (checkCooldown(p, "artemis_bow_shoot", 20)) {
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
+                p.playSound(p.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1, 0.5f);
+            }
         }
     }
 
@@ -184,7 +198,8 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         long last = cooldowns.get(p.getUniqueId()).getOrDefault(item, 0L);
         if (now - last < sec * 1000L) {
-            p.sendMessage("§cGotowe za: " + ((sec * 1000L - (now - last)) / 1000) + "s");
+            long remaining = (sec * 1000L - (now - last)) / 1000;
+            p.sendMessage("§cPrzedmiot gotowy za: " + remaining + "s");
             return false;
         }
         cooldowns.get(p.getUniqueId()).put(item, now);
