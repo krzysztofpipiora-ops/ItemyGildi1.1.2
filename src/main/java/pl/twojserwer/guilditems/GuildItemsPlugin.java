@@ -26,7 +26,7 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(this, this);
         registerAllTwentyItems();
         startPassiveEffectsTask();
-        getLogger().info("Zaladowano 20 unikalnych przedmiotow!");
+        getLogger().info("Zaladowano 20 przedmiotow (Zbalansowane Cooldowny)!");
     }
 
     private void registerAllTwentyItems() {
@@ -50,7 +50,6 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
 
         // --- SPECJALNE ---
         createRecipe("escape_totem", Material.TOTEM_OF_UNDYING, "§6Totem Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
-        // POPRAWKA: LAPIS_BLOCK zamiast LAZULI_BLOCK
         createRecipe("knock_stick", Material.STICK, "§bPatyk Odrzutu", 1014, " L ", " S ", " L ", 'L', Material.LAPIS_BLOCK, 'S', Material.STICK);
         createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
         createRecipe("invisibility_cloak", Material.PHANTOM_MEMBRANE, "§fCałun Niewidki", 1016, "PPP", "P P", "PPP", 'P', Material.PHANTOM_MEMBRANE);
@@ -86,11 +85,10 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
 
                 if (id.equals("life_amulet")) {
                     double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                    if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 1.0, maxH));
+                    if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 0.5, maxH)); // Wolniejsze leczenie
                 }
-                // POPRAWKA: DAMAGE_RESISTANCE zamiast RESISTANCE
-                if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
-                if (id.equals("speed_boots")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 1));
+                if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 45, 0));
+                if (id.equals("speed_boots")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 45, 0));
             }
         }, 40L, 40L);
     }
@@ -103,7 +101,17 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Player p = e.getPlayer();
 
         if (e.getAction().name().contains("RIGHT_CLICK")) {
-            if (!checkCooldown(p, id, 5)) return;
+            // USTAWIANIE DŁUŻSZYCH COOLDOWNÓW:
+            int cooldownTime = 15; // Domyślnie 15 sekund
+
+            if (id.equals("thor_hammer")) cooldownTime = 60;   // 1 minuta
+            if (id.equals("vampire_sword")) cooldownTime = 45;  // 45 sekund
+            if (id.equals("escape_totem")) cooldownTime = 120; // 2 minuty
+            if (id.equals("jump_feather")) cooldownTime = 30;  // 30 sekund
+            if (id.equals("invisibility_cloak")) cooldownTime = 90; // 1.5 minuty
+            if (id.equals("gravity_core")) cooldownTime = 60;   // 1 minuta
+
+            if (!checkCooldown(p, id, cooldownTime)) return;
 
             switch (id) {
                 case "thor_hammer" -> {
@@ -111,10 +119,10 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                     if (b != null) p.getWorld().strikeLightning(b.getLocation());
                 }
                 case "vampire_sword" -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
-                case "escape_totem" -> p.teleport(p.getLocation().add(new Random().nextInt(20)-10, 5, new Random().nextInt(20)-10));
+                case "escape_totem" -> p.teleport(p.getLocation().add(new Random().nextInt(40)-20, 5, new Random().nextInt(40)-20));
                 case "jump_feather" -> p.setVelocity(new Vector(0, 1.2, 0));
-                case "invisibility_cloak" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 200, 0));
-                case "gravity_core" -> p.getNearbyEntities(5, 5, 5).forEach(entity -> entity.setVelocity(new Vector(0, 1, 0)));
+                case "invisibility_cloak" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 300, 0));
+                case "gravity_core" -> p.getNearbyEntities(7, 7, 7).forEach(entity -> entity.setVelocity(new Vector(0, 1.2, 0)));
             }
         }
     }
@@ -126,10 +134,12 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
             if (id == null) return;
 
             if (id.equals("ice_scythe") && e.getEntity() instanceof LivingEntity victim) {
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 2));
+                if (!checkCooldown(p, "ice_scythe_hit", 5)) return; // Cooldown na efekt spowolnienia
+                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
             }
             if (id.equals("poison_dagger") && e.getEntity() instanceof LivingEntity victim) {
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 100, 0));
+                if (!checkCooldown(p, "poison_dagger_hit", 8)) return;
+                victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 80, 0));
             }
         }
     }
@@ -140,7 +150,10 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
             String id = getCustomId(e.getBow());
             if (id == null) return;
 
-            if (id.equals("artemis_bow")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 1));
+            if (id.equals("artemis_bow")) {
+                if (!checkCooldown(p, "artemis_bow_shoot", 20)) return;
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
+            }
         }
     }
 
@@ -154,7 +167,8 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         long last = cooldowns.get(p.getUniqueId()).getOrDefault(item, 0L);
         if (now - last < sec * 1000L) {
-            p.sendMessage("§cOdczekaj " + (sec - (now - last) / 1000) + "s!");
+            long remaining = (sec * 1000L - (now - last)) / 1000;
+            p.sendMessage("§cTen przedmiot bedzie gotowy za: " + remaining + "s");
             return false;
         }
         cooldowns.get(p.getUniqueId()).put(item, now);
