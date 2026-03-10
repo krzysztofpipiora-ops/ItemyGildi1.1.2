@@ -27,7 +27,7 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(this, this);
         registerRemainingItems();
         startPassiveEffectsTask();
-        getLogger().info("Zaktualizowano GuildItems - Pozostalo 10 przedmiotow.");
+        getLogger().info("Zaktualizowano GuildItems - Totem to teraz Sztandar.");
     }
 
     private void registerRemainingItems() {
@@ -44,7 +44,8 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         // --- AMULETY I SPECJALNE ---
         createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
         createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 'O', Material.OBSIDIAN, 'S', Material.SHIELD);
-        createRecipe("escape_totem", Material.TOTEM_OF_UNDYING, "§6Totem Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
+        // ZMIANA: Totem ucieczki to teraz WHITE_BANNER
+        createRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
         createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
     }
 
@@ -71,12 +72,13 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                 ItemStack item = p.getInventory().getItemInMainHand();
                 String id = getCustomId(item);
 
-                // TARCZA TYTANA - Naprawione: usuwanie efektu jesli nie trzyma tarczy
                 if ("tank_shield".equals(id)) {
                     p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
-                } else if (p.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE) && 
-                           p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE).getDuration() <= 40) {
-                    p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                } else if (p.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE)) {
+                    // Usuwamy efekt tylko jeśli został nadany przez tarcze (krótki czas trwania)
+                    if (p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE).getDuration() <= 40) {
+                        p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                    }
                 }
 
                 if ("life_amulet".equals(id)) {
@@ -96,7 +98,7 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                 
                 Location hookLoc = e.getHook().getLocation();
                 Vector direction = hookLoc.toVector().subtract(p.getLocation().toVector()).normalize();
-                p.setVelocity(direction.multiply(2.0).setY(1.0));
+                p.setVelocity(direction.multiply(1.8).setY(0.8)); // Delikatnie osłabiony hak dla balansu
                 p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
             }
         }
@@ -104,9 +106,11 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e) {
-        if (isCustomItem(e.getItemInHand(), "gravity_core")) {
+        String id = getCustomId(e.getItemInHand());
+        // Blokujemy stawianie Rdzenia i Sztandaru Ucieczki
+        if ("gravity_core".equals(id) || "escape_totem".equals(id)) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage("§cRdzenia Grawitacji nie można postawić!");
+            e.getPlayer().sendMessage("§cTego przedmiotu nie można postawić!");
         }
     }
 
@@ -136,7 +140,7 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                     Location loc = p.getLocation().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
                     loc.setY(p.getWorld().getHighestBlockYAt(loc) + 1);
                     p.teleport(loc);
-                    p.sendMessage("§aTeleportowano w bezpieczne miejsce!");
+                    p.sendMessage("§aUżyto Sztandaru Ucieczki!");
                 }
                 case "gravity_core" -> {
                     if (!checkCooldown(p, id, 60)) return;
