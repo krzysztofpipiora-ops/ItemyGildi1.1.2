@@ -5,6 +5,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.*;
@@ -24,39 +25,27 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
-        registerAllTwentyItems();
+        registerRemainingItems();
         startPassiveEffectsTask();
-        getLogger().info("Zaladowano 20 przedmiotow (Zbalansowane Cooldowny)!");
+        getLogger().info("Zaktualizowano GuildItems - Pozostalo 10 przedmiotow.");
     }
 
-    private void registerAllTwentyItems() {
+    private void registerRemainingItems() {
         // --- MIECZE I NARZEDZIA ---
         createRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "RNR", "RSR", " R ", 'R', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
         createRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "ISI", " S ", 'I', Material.IRON_BLOCK, 'S', Material.BLAZE_ROD);
         createRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 'D', Material.DIAMOND_BLOCK, 'I', Material.ICE, 'S', Material.STICK);
-        createRecipe("lava_blade", Material.NETHERITE_SWORD, "§6Ognisty Język", 1004, " L ", " L ", " S ", 'L', Material.LAVA_BUCKET, 'S', Material.BLAZE_ROD);
         createRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " S ", "   ", 'P', Material.POISONOUS_POTATO, 'S', Material.IRON_INGOT);
 
-        // --- LUKI ---
+        // --- DYSTANSOWE ---
         createRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QW", " Q ", " QW", 'Q', Material.QUARTZ_BLOCK, 'W', Material.WHITE_WOOL);
-        createRecipe("explosive_bow", Material.BOW, "§cŁuk Wybuchowy", 1007, "TNT", "TBT", "TNT", 'T', Material.TNT, 'B', Material.BOW);
-        createRecipe("ender_bow", Material.BOW, "§5Łuk Pereł", 1008, " E ", " E ", " B ", 'E', Material.ENDER_PEARL, 'B', Material.BOW);
+        createRecipe("grappling_hook", Material.FISHING_ROD, "§bHak", 1020, "III", "IRI", "III", 'I', Material.IRON_INGOT, 'R', Material.FISHING_ROD);
 
-        // --- AMULETY I EKWIPUNEK ---
+        // --- AMULETY I SPECJALNE ---
         createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
         createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 'O', Material.OBSIDIAN, 'S', Material.SHIELD);
-        createRecipe("speed_boots", Material.NETHERITE_BOOTS, "§fButy Hermesa", 1011, "F F", "B B", "   ", 'F', Material.FEATHER, 'B', Material.NETHERITE_BOOTS);
-        createRecipe("miner_pickaxe", Material.NETHERITE_PICKAXE, "§6Kilof Fortuny", 1012, "DDD", " S ", " S ", 'D', Material.DIAMOND, 'S', Material.STICK);
-
-        // --- SPECJALNE ---
         createRecipe("escape_totem", Material.TOTEM_OF_UNDYING, "§6Totem Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
-        createRecipe("knock_stick", Material.STICK, "§bPatyk Odrzutu", 1014, " L ", " S ", " L ", 'L', Material.LAPIS_BLOCK, 'S', Material.STICK);
         createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
-        createRecipe("invisibility_cloak", Material.PHANTOM_MEMBRANE, "§fCałun Niewidki", 1016, "PPP", "P P", "PPP", 'P', Material.PHANTOM_MEMBRANE);
-        createRecipe("dragon_breath", Material.DRAGON_BREATH, "§5Oddech Smoka", 1017, " B ", " B ", " B ", 'B', Material.DRAGON_BREATH);
-        createRecipe("farmer_hoe", Material.GOLDEN_HOE, "§eMotyka Farmera", 1018, "WWW", " S ", " S ", 'W', Material.WHEAT, 'S', Material.STICK);
-        createRecipe("jump_feather", Material.FEATHER, "§fPióro Skoku", 1019, " F ", " F ", " F ", 'F', Material.FEATHER);
-        createRecipe("web_launcher", Material.FISHING_ROD, "§7Sieciomiot", 1020, "CCC", "CRC", "CCC", 'C', Material.COBWEB, 'R', Material.FISHING_ROD);
     }
 
     private void createRecipe(String id, Material mat, String name, int cmd, String s1, String s2, String s3, Object... ing) {
@@ -81,16 +70,44 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 ItemStack item = p.getInventory().getItemInMainHand();
                 String id = getCustomId(item);
-                if (id == null) continue;
 
-                if (id.equals("life_amulet")) {
-                    double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                    if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 0.5, maxH)); // Wolniejsze leczenie
+                // TARCZA TYTANA - Naprawione: usuwanie efektu jesli nie trzyma tarczy
+                if ("tank_shield".equals(id)) {
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
+                } else if (p.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE) && 
+                           p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE).getDuration() <= 40) {
+                    p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
                 }
-                if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 45, 0));
-                if (id.equals("speed_boots")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 45, 0));
+
+                if ("life_amulet".equals(id)) {
+                    double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                    if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 0.5, maxH));
+                }
             }
-        }, 40L, 40L);
+        }, 20L, 20L);
+    }
+
+    @EventHandler
+    public void onGrapple(PlayerFishEvent e) {
+        Player p = e.getPlayer();
+        if (isCustomItem(p.getInventory().getItemInMainHand(), "grappling_hook")) {
+            if (e.getState() == PlayerFishEvent.State.IN_GROUND) {
+                if (!checkCooldown(p, "grappling_hook", 90)) return;
+                
+                Location hookLoc = e.getHook().getLocation();
+                Vector direction = hookLoc.toVector().subtract(p.getLocation().toVector()).normalize();
+                p.setVelocity(direction.multiply(2.0).setY(1.0));
+                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlaceBlock(BlockPlaceEvent e) {
+        if (isCustomItem(e.getItemInHand(), "gravity_core")) {
+            e.setCancelled(true);
+            e.getPlayer().sendMessage("§cRdzenia Grawitacji nie można postawić!");
+        }
     }
 
     @EventHandler
@@ -101,28 +118,30 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Player p = e.getPlayer();
 
         if (e.getAction().name().contains("RIGHT_CLICK")) {
-            // USTAWIANIE DŁUŻSZYCH COOLDOWNÓW:
-            int cooldownTime = 15; // Domyślnie 15 sekund
-
-            if (id.equals("thor_hammer")) cooldownTime = 60;   // 1 minuta
-            if (id.equals("vampire_sword")) cooldownTime = 45;  // 45 sekund
-            if (id.equals("escape_totem")) cooldownTime = 120; // 2 minuty
-            if (id.equals("jump_feather")) cooldownTime = 30;  // 30 sekund
-            if (id.equals("invisibility_cloak")) cooldownTime = 90; // 1.5 minuty
-            if (id.equals("gravity_core")) cooldownTime = 60;   // 1 minuta
-
-            if (!checkCooldown(p, id, cooldownTime)) return;
-
             switch (id) {
                 case "thor_hammer" -> {
+                    if (!checkCooldown(p, id, 60)) return;
                     Block b = p.getTargetBlockExact(30);
                     if (b != null) p.getWorld().strikeLightning(b.getLocation());
                 }
-                case "vampire_sword" -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
-                case "escape_totem" -> p.teleport(p.getLocation().add(new Random().nextInt(40)-20, 5, new Random().nextInt(40)-20));
-                case "jump_feather" -> p.setVelocity(new Vector(0, 1.2, 0));
-                case "invisibility_cloak" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 300, 0));
-                case "gravity_core" -> p.getNearbyEntities(7, 7, 7).forEach(entity -> entity.setVelocity(new Vector(0, 1.2, 0)));
+                case "vampire_sword" -> {
+                    if (!checkCooldown(p, id, 45)) return;
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
+                }
+                case "escape_totem" -> {
+                    if (!checkCooldown(p, id, 300)) return; // 5 minut
+                    Random r = new Random();
+                    int dist = 50 + r.nextInt(31); // 50-80 kratek
+                    double angle = r.nextDouble() * 2 * Math.PI;
+                    Location loc = p.getLocation().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                    loc.setY(p.getWorld().getHighestBlockYAt(loc) + 1);
+                    p.teleport(loc);
+                    p.sendMessage("§aTeleportowano w bezpieczne miejsce!");
+                }
+                case "gravity_core" -> {
+                    if (!checkCooldown(p, id, 60)) return;
+                    p.getNearbyEntities(7, 7, 7).forEach(entity -> entity.setVelocity(new Vector(0, 1.2, 0)));
+                }
             }
         }
     }
@@ -131,29 +150,19 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     public void onHit(EntityDamageByEntityEvent e) {
         if (e.getDamager() instanceof Player p) {
             String id = getCustomId(p.getInventory().getItemInMainHand());
-            if (id == null) return;
-
-            if (id.equals("ice_scythe") && e.getEntity() instanceof LivingEntity victim) {
-                if (!checkCooldown(p, "ice_scythe_hit", 5)) return; // Cooldown na efekt spowolnienia
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
+            if ("ice_scythe".equals(id) && e.getEntity() instanceof LivingEntity victim) {
+                if (checkCooldown(p, "ice_scythe_hit", 5)) victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
             }
-            if (id.equals("poison_dagger") && e.getEntity() instanceof LivingEntity victim) {
-                if (!checkCooldown(p, "poison_dagger_hit", 8)) return;
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 80, 0));
+            if ("poison_dagger".equals(id) && e.getEntity() instanceof LivingEntity victim) {
+                if (checkCooldown(p, "poison_dagger_hit", 8)) victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 80, 0));
             }
         }
     }
 
     @EventHandler
     public void onShoot(EntityShootBowEvent e) {
-        if (e.getEntity() instanceof Player p) {
-            String id = getCustomId(e.getBow());
-            if (id == null) return;
-
-            if (id.equals("artemis_bow")) {
-                if (!checkCooldown(p, "artemis_bow_shoot", 20)) return;
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
-            }
+        if (e.getEntity() instanceof Player p && isCustomItem(e.getBow(), "artemis_bow")) {
+            if (checkCooldown(p, "artemis_bow_shoot", 20)) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
         }
     }
 
@@ -162,13 +171,16 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         return item.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
     }
 
+    private boolean isCustomItem(ItemStack item, String id) {
+        return id.equals(getCustomId(item));
+    }
+
     private boolean checkCooldown(Player p, String item, int sec) {
         cooldowns.putIfAbsent(p.getUniqueId(), new HashMap<>());
         long now = System.currentTimeMillis();
         long last = cooldowns.get(p.getUniqueId()).getOrDefault(item, 0L);
         if (now - last < sec * 1000L) {
-            long remaining = (sec * 1000L - (now - last)) / 1000;
-            p.sendMessage("§cTen przedmiot bedzie gotowy za: " + remaining + "s");
+            p.sendMessage("§cGotowe za: " + ((sec * 1000L - (now - last)) / 1000) + "s");
             return false;
         }
         cooldowns.get(p.getUniqueId()).put(item, now);
