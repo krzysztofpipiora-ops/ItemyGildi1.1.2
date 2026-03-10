@@ -30,27 +30,28 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
     }
 
     private void registerAllTwentyItems() {
-        // --- MIECZE I NARZEDZIA BOJOWE ---
+        // --- MIECZE I NARZEDZIA ---
         createRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "RNR", "RSR", " R ", 'R', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
         createRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "ISI", " S ", 'I', Material.IRON_BLOCK, 'S', Material.BLAZE_ROD);
         createRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 'D', Material.DIAMOND_BLOCK, 'I', Material.ICE, 'S', Material.STICK);
         createRecipe("lava_blade", Material.NETHERITE_SWORD, "§6Ognisty Język", 1004, " L ", " L ", " S ", 'L', Material.LAVA_BUCKET, 'S', Material.BLAZE_ROD);
         createRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " S ", "   ", 'P', Material.POISONOUS_POTATO, 'S', Material.IRON_INGOT);
 
-        // --- LUKI I DYSTANSE ---
+        // --- LUKI ---
         createRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QW", " Q ", " QW", 'Q', Material.QUARTZ_BLOCK, 'W', Material.WHITE_WOOL);
         createRecipe("explosive_bow", Material.BOW, "§cŁuk Wybuchowy", 1007, "TNT", "TBT", "TNT", 'T', Material.TNT, 'B', Material.BOW);
         createRecipe("ender_bow", Material.BOW, "§5Łuk Pereł", 1008, " E ", " E ", " B ", 'E', Material.ENDER_PEARL, 'B', Material.BOW);
 
-        // --- AMULETY I PASYWNE (Trzymane w rece) ---
+        // --- AMULETY I EKWIPUNEK ---
         createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
         createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 'O', Material.OBSIDIAN, 'S', Material.SHIELD);
         createRecipe("speed_boots", Material.NETHERITE_BOOTS, "§fButy Hermesa", 1011, "F F", "B B", "   ", 'F', Material.FEATHER, 'B', Material.NETHERITE_BOOTS);
         createRecipe("miner_pickaxe", Material.NETHERITE_PICKAXE, "§6Kilof Fortuny", 1012, "DDD", " S ", " S ", 'D', Material.DIAMOND, 'S', Material.STICK);
 
-        // --- SPECJALNE / UZYTKOWE ---
+        // --- SPECJALNE ---
         createRecipe("escape_totem", Material.TOTEM_OF_UNDYING, "§6Totem Ucieczki", 1013, "EEE", "ETE", "EEE", 'E', Material.ENDER_PEARL, 'T', Material.TOTEM_OF_UNDYING);
-        createRecipe("knock_stick", Material.STICK, "§bPatyk Odrzutu", 1014, " L ", " S ", " L ", 'L', Material.LAZULI_BLOCK, 'S', Material.STICK);
+        // POPRAWKA: LAPIS_BLOCK zamiast LAZULI_BLOCK
+        createRecipe("knock_stick", Material.STICK, "§bPatyk Odrzutu", 1014, " L ", " S ", " L ", 'L', Material.LAPIS_BLOCK, 'S', Material.STICK);
         createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
         createRecipe("invisibility_cloak", Material.PHANTOM_MEMBRANE, "§fCałun Niewidki", 1016, "PPP", "P P", "PPP", 'P', Material.PHANTOM_MEMBRANE);
         createRecipe("dragon_breath", Material.DRAGON_BREATH, "§5Oddech Smoka", 1017, " B ", " B ", " B ", 'B', Material.DRAGON_BREATH);
@@ -87,7 +88,8 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                     double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                     if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 1.0, maxH));
                 }
-                if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 1));
+                // POPRAWKA: DAMAGE_RESISTANCE dla lepszej kompatybilnosci
+                if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
                 if (id.equals("speed_boots")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 1));
             }
         }, 40L, 40L);
