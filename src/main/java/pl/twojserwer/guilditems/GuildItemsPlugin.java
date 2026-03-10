@@ -28,20 +28,49 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(this, this);
         registerFinalItems();
         startPassiveEffectsTask();
-        getLogger().info("GuildItems załadowany! Sztandar ucieczki: cooldown 12h.");
+        getLogger().info("GuildItems załadowany! Receptury zostaly utrudnione.");
     }
 
     private void registerFinalItems() {
-        createRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "RNR", "RSR", " R ", 'R', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
-        createRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "ISI", " S ", 'I', Material.IRON_BLOCK, 'S', Material.BLAZE_ROD);
-        createRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 'D', Material.DIAMOND_BLOCK, 'I', Material.ICE, 'S', Material.STICK);
-        createRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " S ", "   ", 'P', Material.POISONOUS_POTATO, 'S', Material.IRON_INGOT);
-        createRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QW", " Q ", " QW", 'Q', Material.QUARTZ_BLOCK, 'W', Material.WHITE_WOOL);
-        createRecipe("grappling_hook", Material.FISHING_ROD, "§bHak", 1020, "III", "IRI", "III", 'I', Material.IRON_INGOT, 'R', Material.FISHING_ROD);
-        createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
-        createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 'O', Material.OBSIDIAN, 'S', Material.SHIELD);
-        createRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "EBE", "EEE", 'E', Material.ENDER_PEARL, 'B', Material.WHITE_BANNER);
-        createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, " P ", " P ", " P ", 'P', Material.PHANTOM_MEMBRANE);
+        // 1. Ostrze Wampira (Bardzo drogie - wymaga Netheritu)
+        createRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "BNB", "NSN", "BNB", 
+            'B', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
+
+        // 2. Młot Thora (Wymaga bloków złota i żelaza)
+        createRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "IGI", " S ", 
+            'I', Material.IRON_BLOCK, 'G', Material.GOLD_BLOCK, 'S', Material.BLAZE_ROD);
+
+        // 3. Kosa Mrozu (Wymaga Diamentów i rzadkiego lodu)
+        createRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 
+            'D', Material.DIAMOND_BLOCK, 'I', Material.BLUE_ICE, 'S', Material.STICK);
+
+        // 4. Zatruty Sztylet (Szybki i relatywnie tańszy, ale upierdliwy)
+        createRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " E ", " S ", 
+            'P', Material.POISONOUS_POTATO, 'E', Material.EMERALD_BLOCK, 'S', Material.IRON_INGOT);
+
+        // 5. Łuk Artemidy (Wymaga kwarcu i cennych nici)
+        createRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QG", " Q ", " QG", 
+            'Q', Material.QUARTZ_BLOCK, 'G', Material.GHAST_TEAR);
+
+        // 6. Hak (Drogi, bo mobilność to potęga)
+        createRecipe("grappling_hook", Material.FISHING_ROD, "§bHak", 1020, "CCC", "CRC", "CCC", 
+            'C', Material.CHAIN, 'R', Material.FISHING_ROD);
+
+        // 7. Amulet Życia (Najdroższy - wymaga Gwiazdy Netheru)
+        createRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 
+            'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
+
+        // 8. Tarcza Tytana (Wymaga płaczącego obsydianu)
+        createRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 
+            'O', Material.CRYING_OBSIDIAN, 'S', Material.SHIELD);
+        
+        // 9. Sztandar Ucieczki (8 Pereł i Sztandar)
+        createRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "EBE", "EEE", 
+            'E', Material.ENDER_PEARL, 'B', Material.WHITE_BANNER);
+        
+        // 10. Rdzeń Grawitacji (Wymaga Serca Morza)
+        createRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, "MMM", "MSM", "MMM", 
+            'M', Material.PHANTOM_MEMBRANE, 'S', Material.HEART_OF_THE_SEA);
     }
 
     private void createRecipe(String id, Material mat, String name, int cmd, String s1, String s2, String s3, Object... ing) {
