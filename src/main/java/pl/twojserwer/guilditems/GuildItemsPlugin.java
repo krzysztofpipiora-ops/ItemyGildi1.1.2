@@ -88,7 +88,7 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
                     double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                     if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 1.0, maxH));
                 }
-                // POPRAWKA: DAMAGE_RESISTANCE dla lepszej kompatybilnosci
+                // POPRAWKA: DAMAGE_RESISTANCE zamiast RESISTANCE
                 if (id.equals("tank_shield")) p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
                 if (id.equals("speed_boots")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 1));
             }
@@ -141,7 +141,6 @@ public class GuildItemsPlugin extends JavaPlugin implements Listener {
             if (id == null) return;
 
             if (id.equals("artemis_bow")) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 1));
-            if (id.equals("explosive_bow")) e.getProjectile().setMetadata("explode", new org.bukkit.metadata.FixedMetadataValue(this, true));
         }
     }
 
