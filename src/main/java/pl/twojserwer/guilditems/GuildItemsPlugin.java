@@ -1,247 +1,232 @@
-package pl.twojserwer.guilditems;
+package pl.twojserwer.gildie;
 
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.block.Block;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.*;
-import org.bukkit.event.*;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.player.*;
-import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.*;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.*;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
+
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class GuildItemsPlugin extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
+public class GuildBosses extends JavaPlugin implements Listener, CommandExecutor {
 
-    private final HashMap<UUID, Map<String, Long>> cooldowns = new HashMap<>();
-    private final Map<String, ItemStack> customItems = new HashMap<>();
-    private final NamespacedKey itemKey = new NamespacedKey(this, "custom_item_id");
-    private final NamespacedKey bannerCooldownKey = new NamespacedKey(this, "banner_cooldown");
+    private final NamespacedKey itemKey = new NamespacedKey(this, "unique_artifact");
+    private final Map<String, Long> cooldowns = new HashMap<>();
 
     @Override
     public void onEnable() {
-        Bukkit.getPluginManager().registerEvents(this, this);
+        if (getCommand("boss") != null) {
+            getCommand("boss").setExecutor(this);
+        }
+        getServer().getPluginManager().registerEvents(this, this);
         
-        // Rejestracja komendy
-        if (getCommand("dajitem") != null) {
-            getCommand("dajitem").setExecutor(this);
-            getCommand("dajitem").setTabCompleter(this);
-        }
-
-        registerFinalItems();
-        startPassiveEffectsTask();
-        getLogger().info("GuildItems v2.0 załadowany pomyślnie!");
-    }
-
-    private void registerFinalItems() {
-        // 1. Ostrze Wampira
-        addAndRecipe("vampire_sword", Material.NETHERITE_SWORD, "§4Ostrze Wampira", 1001, "BNB", "NSN", "BNB", 
-            'B', Material.REDSTONE_BLOCK, 'N', Material.NETHERITE_INGOT, 'S', Material.NETHERITE_SWORD);
-
-        // 2. Młot Thora
-        addAndRecipe("thor_hammer", Material.NETHERITE_AXE, "§eMlot Thora", 1002, "III", "IGI", " S ", 
-            'I', Material.IRON_BLOCK, 'G', Material.GOLD_BLOCK, 'S', Material.BLAZE_ROD);
-
-        // 3. Kosa Mrozu
-        addAndRecipe("ice_scythe", Material.NETHERITE_HOE, "§bKosa Mrozu", 1003, "DDI", " S ", " S ", 
-            'D', Material.DIAMOND_BLOCK, 'I', Material.BLUE_ICE, 'S', Material.STICK);
-
-        // 4. Zatruty Sztylet
-        addAndRecipe("poison_dagger", Material.IRON_SWORD, "§2Zatruty Sztylet", 1005, " P ", " E ", " S ", 
-            'P', Material.POISONOUS_POTATO, 'E', Material.EMERALD_BLOCK, 'S', Material.IRON_INGOT);
-
-        // 5. Łuk Artemidy
-        addAndRecipe("artemis_bow", Material.BOW, "§aLuk Artemidy", 1006, " QG", " Q ", " QG", 
-            'Q', Material.QUARTZ_BLOCK, 'G', Material.GHAST_TEAR);
-
-        // 6. Hak
-        addAndRecipe("grappling_hook", Material.FISHING_ROD, "§bHak", 1020, "CCC", "CRC", "CCC", 
-            'C', Material.CHAIN, 'R', Material.FISHING_ROD);
-
-        // 7. Amulet Życia
-        addAndRecipe("life_amulet", Material.NETHER_STAR, "§d§lAmulet Zycia", 1009, "GGG", "GNG", "GGG", 
-            'G', Material.GOLD_BLOCK, 'N', Material.NETHER_STAR);
-
-        // 8. Tarcza Tytana
-        addAndRecipe("tank_shield", Material.SHIELD, "§7Tarcza Tytana", 1010, "OOO", "OSO", "OOO", 
-            'O', Material.CRYING_OBSIDIAN, 'S', Material.SHIELD);
-
-        // 9. Sztandar Ucieczki
-        addAndRecipe("escape_totem", Material.WHITE_BANNER, "§6Sztandar Ucieczki", 1013, "EEE", "EBE", "EEE", 
-            'E', Material.ENDER_PEARL, 'B', Material.WHITE_BANNER);
-
-        // 10. Rdzeń Grawitacji
-        addAndRecipe("gravity_core", Material.CONDUIT, "§9Rdzeń Grawitacji", 1015, "MMM", "MSM", "MMM", 
-            'M', Material.PHANTOM_MEMBRANE, 'S', Material.HEART_OF_THE_SEA);
-    }
-
-    private void addAndRecipe(String id, Material mat, String name, int cmd, String s1, String s2, String s3, Object... ing) {
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            meta.setCustomModelData(cmd);
-            meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, id);
-            item.setItemMeta(meta);
-            customItems.put(id, item);
-            ShapedRecipe recipe = new ShapedRecipe(new NamespacedKey(this, id), item);
-            recipe.shape(s1, s2, s3);
-            for (int i = 0; i < ing.length; i += 2) recipe.setIngredient((Character) ing[i], (Material) ing[i + 1]);
-            Bukkit.addRecipe(recipe);
-        }
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player p)) return true;
-        if (!p.isOp()) { p.sendMessage("§cBrak uprawnień!"); return true; }
-        if (args.length == 0) { p.sendMessage("§eUżycie: /dajitem <nazwa>"); return true; }
-
-        ItemStack item = customItems.get(args[0]);
-        if (item != null) {
-            p.getInventory().addItem(item.clone());
-            p.sendMessage("§aDodałeś do eq: " + item.getItemMeta().getDisplayName());
-        } else {
-            p.sendMessage("§cNie ma takiego przedmiotu!");
-        }
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return customItems.keySet().stream()
-                .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
-                .collect(Collectors.toList());
-        return new ArrayList<>();
-    }
-
-    private void startPassiveEffectsTask() {
+        // Sprawdzanie Pierscienia co sekunde
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 ItemStack item = p.getInventory().getItemInMainHand();
-                String id = getCustomId(item);
-
-                if ("tank_shield".equals(id)) {
-                    p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 45, 1));
-                } else {
-                    PotionEffect pe = p.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
-                    if (pe != null && pe.getDuration() <= 45) p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
-                }
-
-                if ("life_amulet".equals(id)) {
-                    double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                    if (p.getHealth() < maxH) p.setHealth(Math.min(p.getHealth() + 0.5, maxH));
+                if (isArtifact(item, "wampir") && p.getHealth() <= 10.0) {
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 35, 0, false, false, true));
                 }
             }
         }, 20L, 20L);
+
+        getLogger().info("Plugin BossyGildii (Kataklizm 5% pvp) wlaczony!");
     }
 
-    @EventHandler
-    public void onGrapple(PlayerFishEvent e) {
-        Player p = e.getPlayer();
-        if (isCustomItem(p.getInventory().getItemInMainHand(), "grappling_hook") && e.getState() == PlayerFishEvent.State.IN_GROUND) {
-            if (!checkCooldown(p, "grappling_hook", 90)) { e.getHook().remove(); return; }
-            p.setVelocity(e.getHook().getLocation().toVector().subtract(p.getLocation().toVector()).normalize().multiply(1.8).setY(0.8));
-            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1.2f);
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!(sender instanceof Player)) return true;
+        Player p = (Player) sender;
+        if (!p.isOp()) {
+            p.sendMessage("§cNie masz uprawnien!");
+            return true;
         }
+
+        if (args.length == 0) {
+            p.sendMessage("§cUzycie: /boss <kataklizm|burza|niszczyciel|wampir|otchlan>");
+            return true;
+        }
+
+        spawnBoss(p.getLocation(), args[0].toLowerCase());
+        p.sendMessage("§6§l[!] §ePrzywolano bossa (500HP): §f" + args[0]);
+        return true;
+    }
+
+    private void spawnBoss(Location loc, String type) {
+        LivingEntity boss;
+        String name;
+        switch (type) {
+            case "kataklizm": boss = (WitherSkeleton) loc.getWorld().spawnEntity(loc, EntityType.WITHER_SKELETON); name = "§4§lBoss Kataklizmu"; break;
+            case "burza": boss = (Zombie) loc.getWorld().spawnEntity(loc, EntityType.ZOMBIE); name = "§b§lWladca Burz"; break;
+            case "niszczyciel": boss = (Skeleton) loc.getWorld().spawnEntity(loc, EntityType.SKELETON); name = "§6§lNiszczyciel Swiatow"; break;
+            case "wampir": boss = (Husk) loc.getWorld().spawnEntity(loc, EntityType.HUSK); name = "§c§lWladca Wampirow"; break;
+            case "otchlan": boss = (PiglinBrute) loc.getWorld().spawnEntity(loc, EntityType.PIGLIN_BRUTE); name = "§1§lWladca Otchlani"; break;
+            default: return;
+        }
+
+        boss.setCustomName(name);
+        boss.setCustomNameVisible(true);
+        boss.setMetadata("boss_type", new FixedMetadataValue(this, type));
+        
+        if (boss.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+            boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(500.0);
+            boss.setHealth(500.0);
+        }
+        
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 999999, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 999999, 0));
     }
 
     @EventHandler
-    public void onPlaceBlock(BlockPlaceEvent e) {
-        String id = getCustomId(e.getItemInHand());
-        if ("gravity_core".equals(id) || "escape_totem".equals(id)) {
-            e.setCancelled(true);
-            e.getPlayer().sendMessage("§cTego legendarnego przedmiotu nie można postawić!");
+    public void onBossDeath(EntityDeathEvent e) {
+        if (!e.getEntity().hasMetadata("boss_type")) return;
+        String type = e.getEntity().getMetadata("boss_type").get(0).asString();
+        
+        ItemStack artifact = null;
+        switch (type) {
+            case "kataklizm": artifact = createArtifact(Material.NETHERITE_SWORD, "§4§lOstrze Kataklizmu", "kataklizm", "§c+5% obrażeń PvP"); break;
+            case "burza": artifact = createArtifact(Material.BLAZE_ROD, "§b§lBerlo Burzy", "burza", "§7Wlada piorunami."); break;
+            case "niszczyciel": artifact = createArtifact(Material.BOW, "§6§lLuk Niszczyciela", "niszczyciel", "§7Luk Niszczyciela Swiatow."); break;
+            case "wampir": artifact = createArtifact(Material.NETHERITE_SCRAP, "§c§lPierscien Krwawej Furii", "wampir", "§7Pierscien Wladcy Wampirow."); break;
+            case "otchlan": artifact = createRelic(); break;
+        }
+        if (artifact != null) e.getDrops().add(artifact);
+    }
+
+    @EventHandler
+    public void onCombat(EntityDamageByEntityEvent e) {
+        if (!(e.getDamager() instanceof Player)) return;
+        Player p = (Player) e.getDamager();
+        ItemStack item = p.getInventory().getItemInMainHand();
+        String id = getArtifactId(item);
+
+        if (id == null) return;
+
+        // Ostrze Kataklizmu: Zmienione na +5% (mnoznik 1.05)
+        if (id.equals("kataklizm")) {
+            if (e.getEntity() instanceof Player) {
+                e.setDamage(e.getDamage() * 1.05);
+            }
+            if (Math.random() < 0.02 && e.getEntity() instanceof LivingEntity) {
+                LivingEntity target = (LivingEntity) e.getEntity();
+                target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
+                target.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, target.getLocation(), 1);
+            }
+        }
+
+        if (id.equals("burza") && Math.random() < 0.10) {
+            e.getEntity().getWorld().strikeLightning(e.getEntity().getLocation());
+        }
+
+        if (id.equals("wampir") && p.getHealth() <= 10.0) {
+            e.setDamage(e.getDamage() * 1.4);
         }
     }
 
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
-        ItemStack item = e.getItem();
-        String id = getCustomId(item);
-        if (id == null) return;
         Player p = e.getPlayer();
+        ItemStack item = e.getItem();
+        String id = getArtifactId(item);
+        if (id == null || !e.getAction().name().contains("RIGHT")) return;
 
-        if (e.getAction().name().contains("RIGHT_CLICK")) {
-            switch (id) {
-                case "thor_hammer" -> { if (checkCooldown(p, id, 60)) { Block b = p.getTargetBlockExact(30); if (b != null) p.getWorld().strikeLightning(b.getLocation()); } }
-                case "vampire_sword" -> { if (checkCooldown(p, id, 45)) p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1)); }
-                case "escape_totem" -> handleBannerEscape(p);
-                case "gravity_core" -> {
-                    if (checkCooldown(p, id, 60)) {
-                        p.getNearbyEntities(7, 7, 7).forEach(en -> { if (en instanceof LivingEntity) en.setVelocity(new Vector(0, 1.2, 0)); });
-                        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1, 2);
-                    }
-                }
+        if (id.equals("kataklizm")) {
+            if (checkCooldown(p, "kat_active", 180)) {
+                p.getNearbyEntities(6, 6, 6).forEach(ent -> {
+                    Vector v = ent.getLocation().toVector().subtract(p.getLocation().toVector()).normalize().multiply(1.8);
+                    ent.setVelocity(v);
+                });
+                p.sendMessage("§4§lKataklizm: §fFala energii!");
             }
         }
-    }
 
-    private void handleBannerEscape(Player p) {
-        long now = System.currentTimeMillis();
-        long last = p.getPersistentDataContainer().getOrDefault(bannerCooldownKey, PersistentDataType.LONG, 0L);
-        long twelveH = 12 * 60 * 60 * 1000L;
-
-        if (now - last < twelveH) {
-            long rem = twelveH - (now - last);
-            long h = rem / 3600000;
-            long m = (rem % 3600000) / 60000;
-            p.sendMessage("§cSztandar ucieczki będzie gotowy za: §f" + h + "h " + m + "m");
-            return;
-        }
-
-        p.getPersistentDataContainer().set(bannerCooldownKey, PersistentDataType.LONG, now);
-        Random r = new Random();
-        int d = 50 + r.nextInt(31);
-        double a = r.nextDouble() * 2 * Math.PI;
-        Location l = p.getLocation().add(Math.cos(a) * d, 0, Math.sin(a) * d);
-        l.setY(p.getWorld().getHighestBlockYAt(l) + 1.5);
-        p.teleport(l);
-        p.playSound(l, Sound.ENTITY_ENDERMAN_TELEPORT, 1, 1);
-        p.sendMessage("§6Użyto Sztandaru Ucieczki! Następne użycie za 12 godzin.");
-    }
-
-    @EventHandler
-    public void onHit(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player p) {
-            String id = getCustomId(p.getInventory().getItemInMainHand());
-            if ("ice_scythe".equals(id) && e.getEntity() instanceof LivingEntity v && checkCooldown(p, "ice_scythe_hit", 5)) v.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
-            if ("poison_dagger".equals(id) && e.getEntity() instanceof LivingEntity v && checkCooldown(p, "poison_dagger_hit", 8)) v.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 80, 0));
+        if (id.equals("burza")) {
+            if (checkCooldown(p, "burza_active", 120)) {
+                Location loc = p.getTargetBlock(null, 30).getLocation();
+                loc.getWorld().strikeLightning(loc);
+                p.sendMessage("§b§lBurza: §fPrzywolano piorun!");
+            }
         }
     }
 
     @EventHandler
     public void onShoot(EntityShootBowEvent e) {
-        if (e.getEntity() instanceof Player p && isCustomItem(e.getBow(), "artemis_bow") && checkCooldown(p, "artemis_bow_shoot", 20)) p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
+        if (!(e.getEntity() instanceof Player)) return;
+        String id = getArtifactId(e.getBow());
+        if ("niszczyciel".equals(id)) {
+            Player p = (Player) e.getEntity();
+            if (Math.random() < 0.20) e.getProjectile().setFireTicks(2000);
+            if (checkCooldown(p, "luk_aoe", 60)) {
+                Bukkit.getScheduler().runTaskLater(this, () -> {
+                    e.getProjectile().getWorld().createExplosion(e.getProjectile().getLocation(), 2.0f, false, false);
+                }, 20L);
+            }
+        }
     }
 
-    private String getCustomId(ItemStack item) {
+    private ItemStack createArtifact(Material mat, String name, String id, String lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            meta.setLore(Collections.singletonList(lore));
+            meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, id);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack createRelic() {
+        ItemStack item = new ItemStack(Material.GOLDEN_HELMET);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§1§lRelikt Wladcy Otchlani");
+            meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, "otchlan");
+            UUID attrUuid = UUID.nameUUIDFromBytes("relic_hp_key".getBytes());
+            AttributeModifier modifier = new AttributeModifier(attrUuid, "relic_hp", 4.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HEAD);
+            meta.addAttributeModifier(Attribute.GENERIC_MAX_HEALTH, modifier);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private boolean isArtifact(ItemStack item, String id) {
+        if (item == null || !item.hasItemMeta()) return false;
+        String val = item.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
+        return id.equals(val);
+    }
+
+    private String getArtifactId(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
         return item.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
     }
 
-    private boolean isCustomItem(ItemStack item, String id) { return id.equals(getCustomId(item)); }
-
-    private boolean checkCooldown(Player p, String item, int sec) {
-        cooldowns.putIfAbsent(p.getUniqueId(), new HashMap<>());
+    private boolean checkCooldown(Player p, String key, int seconds) {
+        String fullKey = p.getUniqueId().toString() + key;
         long now = System.currentTimeMillis();
-        long last = cooldowns.get(p.getUniqueId()).getOrDefault(item, 0L);
-        if (now - last < sec * 1000L) {
-            p.sendMessage("§cOdczekaj jeszcze " + ((sec * 1000L - (now - last)) / 1000) + "s!");
+        long last = cooldowns.getOrDefault(fullKey, 0L);
+        if (now - last < seconds * 1000L) {
+            p.sendMessage("§cOdczekaj " + (seconds - (now - last) / 1000) + "s!");
             return false;
         }
-        cooldowns.get(p.getUniqueId()).put(item, now);
+        cooldowns.put(fullKey, now);
         return true;
     }
 }
